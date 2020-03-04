@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <!--
+      Author: Bryen Begg <Bryen.Begg@tc.gc.ca>
+      Date:   2020-03-04
+      License: MIT
+      Copyright: Copyright (c) Her Majesty the Queen in Right of Canada, as represented by the Minister of Transport Canada, 2020
+      Description / Preface:
+        This is an installer that has no UI or parameters.
+        It is just get a legacy library installed in the GAC and a few reg entries.
+    -->
+    
+    <!--
+      Tips & Tricks:
+        + Everywhere that has an ID needs to be unique guid.
+        + Upgrade code HAS to be the same for all updates. Once you've chosen it don't change it.
+            - The one in this one lines up with the legacy installer 
+        + Use WiX Toolset's Dark.exe to decompile the old MSI to get a guess at what it is doing.
+            - Example for extracting the files & instructions (.wsx is XML instructions for WiX) from an MSI
+              = PS> .\dark.exe -x C:\temp\dark\InstallerFiles\ 'C:\temp\dark\TC Mailer.msi' C:\temp\dark\TCMailer.wsx
+        + Use the WiX Toolset Visual Studio Extension to make a project that simplifies calling the MSI compilers & linkers. 
+        + If you have x64 bit Reg entries to make for a x86 library, the MSI needs to be x64 and specify x86 components
+            - This can be done in the VS Extension by having the build configuration target x64
+            - If doing by hand, the candle.exe has to be passed -arch x64
+            
+    
+      Helpful Tools:
+        + GUID Generator    -   https://www.guidgenerator.com/online-guid-generator.aspx
+        + WiX ToolSet Ref   -   https://wixtoolset.org/documentation/manual/v3/
+        + WiX Downdloads    -   https://wixtoolset.org/releases/
+        + dnSpy Decompilier -   https://github.com/0xd4d/dnSpy
+        + Good example WXS  -   https://helgeklein.com/blog/2014/09/real-world-example-wix-msi-application-installer/#product-wxs
+    
+    -->
+  
+
+    <!--
+        ====================================================================================
+        Defines & Variables
+     --> 
+    
+    <!--
+        ====================================================================================
+        Package start
+     -->
+  
+    <!-- 
+        The Product:
+          + Be sure to set:
+            - ID = <Custom GUID> / * to auto generate
+            - Name = <How it will show up in Add/Remove>
+            - Version = <Version in Add/Remove>
+            - Manufacturer = <Manufacturer in Add/Remove>    
+      -->
+    <Product Id="*" Codepage="1252" Name="TC Mailer - TC3oE Edition" Language="1033" Version="1.2.1" Manufacturer="Transport Canada" UpgradeCode="E2864069-EFCA-46D7-AA1E-E9D6F0605059">
+        <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" Description="Legacy TC Mailer '3.0' installer for Azure"/>
+        <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+        <MediaTemplate EmbedCab="yes" />
+      
+        <!--
+          The Feature(s):
+            + The for our simple uses, we just have one feature to do the things.
+        -->
+        <Feature Id="ProductFeature" Title="TCMailer" Description="Install and register Transport Canada's legacy mail wrapper" Level="1" Absent="disallow">
+          
+          <ComponentRef Id="LibraryFile"/>
+          <ComponentRef Id="LibraryFileGAC"/>
+          <ComponentRef Id="LibraryConfig"/>
+          
+          <!-- Since we have to write both x86 and x64 Reg entries, some magic is needed-->
+          <ComponentRef Id="ConfigRegistry32"/>
+          <?if $(sys.BUILDARCH)=x64 ?>
+            <ComponentRef Id="ConfigRegistry64"/>
+          <?endif ?>
+  
+        </Feature>
+    </Product>
+  
+    <!-- Fragments are just like reigions; Just for organizing -->
+    <Fragment Id="INSTALLFOLDERS">
+      <!-- Here is the fragment for folders -->
+      
+        <!-- This folder is special -->
+        <Directory Id="TARGETDIR" Name="SourceDir">
+
+
+          <!-- This folder is special 
+               https://docs.microsoft.com/en-us/windows/win32/msi/property-reference
+          -->
+          <Directory Id="ProgramFilesFolder">
+            
+            <!-- This folder gets it's name from the Product Tag aboce-->
+            <Directory Id="TC_Folder" Name="!(bind.property.Manufacturer)">
+              <Directory Id="Mailer_folder" Name="TC Mailer 3.0">
+                  
+                <!-- 
+                  This folder doesn't exist, just for GAC.
+                  The name is custom, nothing special but nothing gets put in it, so never created.
+                -->
+                <Directory Id="GAC" Name="GAC" />
+                  
+              </Directory>
+            </Directory>
+          </Directory>
+        </Directory>
+    </Fragment>
+    <Fragment Id="INSTALLCOMPONENTS">
+      <!-- Here is the fragment for components -->
+      
+      <!--
+          Compontents:
+            + Each Id must be unique to this installer
+            + Each GUID must be unique to this installer 
+      -->
+      
+      <Component Id="LibraryFile" Guid="918f35a8-6494-4faf-94e8-d529d3d9313f" Directory="Mailer_folder" Win64="no">
+        <File Id="libTCMailer" Name="TC Mailer 3.0.dll" Source="TC Mailer 3.0.dll" KeyPath="yes" Checksum="yes" />
+      </Component>
+      <Component Id="LibraryFileGAC" Guid="1d724b21-f62d-4874-b9b9-68cccd8f5c99" Directory="GAC" Win64="no">
+        <File Id="libTCMailerGAC" Name="TC Mailer 3.0.dll" Source="TC Mailer 3.0.dll" KeyPath="yes" Checksum="yes" Assembly=".net" />
+      </Component>
+      <Component Id="LibraryConfig" Guid="d6c33782-1714-4fcf-b970-b799d14489f7" Directory="Mailer_folder" Win64="no">
+        <File Id="iniTCMailer" Name="TCMailer.ini" Source="TCMailer.ini" KeyPath="yes" />
+      </Component>
+
+      
+      <Component Id="ConfigRegistry32" Guid="2dafeb30-0bc2-4b2c-a32d-6eda1cd87af2" Directory="Mailer_folder" Win64="no" >
+        
+        <!-- This registry entry will actually show up in 'HKLM:\SOFTWARE\WOW6432Node\Transport Canada\TC Mailer 3.0' due to Win64=no -->
+        <RegistryKey Root="HKLM" Key="Software\Transport Canada\TC Mailer 3.0">
+          
+          <!-- These two values are using 'smart' values -->
+          <RegistryValue Type="string" Name="Path" Value="[Mailer_folder]" KeyPath="yes"/>
+          <RegistryValue Type="string" Name="AssemblyVersion" Value="[ProductVersion]"/>
+          
+          <!-- This is SemVer2 https://semver.org/ -->
+          <RegistryValue Type="string" Name="PackageVersion" Value="1.0.0-TC3oEAzure"/>
+          
+        </RegistryKey>
+      </Component>
+      
+      <!-- This is the magic we were talking about above -->
+      <?if $(sys.BUILDARCH)=x64 ?>
+      
+        <!-- The Directory doesn't really matter but cannot be in the same place as x86 stuff due to Win64=yes -->
+        <Component Id="ConfigRegistry64" Guid="54774dc7-8ce6-4b46-b05d-5ab97bcd7af8" Directory="TARGETDIR" Win64="yes">
+          <RegistryKey Root="HKLM" Key="Software\Transport Canada\TC Mailer 3.0">
+            <RegistryValue Type="string" Name="Path" Value="[Mailer_folder]" KeyPath="yes"/>
+            <RegistryValue Type="string" Name="AssemblyVersion" Value="[ProductVersion]"/>
+            <RegistryValue Type="string" Name="PackageVersion" Value="1.0.0-TC3oEAzure"/>
+          </RegistryKey>
+        </Component>
+      
+      <?endif ?>
+      
+    </Fragment>
+</Wix>
