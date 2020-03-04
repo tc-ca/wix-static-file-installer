@@ -1,4 +1,4 @@
-([Français](#exemple-d'installation-WiX-pour-les-fichiers-statiques))
+([Français](#exemple-dinstallation-wix-pour-les-fichiers-statiques))
 
 # Example WiX Installer for Static Files
 A sample of installing a sample legacy DLL that just need to get to the right place and get registered.
