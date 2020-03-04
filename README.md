@@ -57,7 +57,7 @@ Pour exécuter *tel quel*, remplacez les deux fichiers supprimés par d'autres f
 
 Le reste des ajustements et de la personnalisation sont tous contenus dans le fichier `\TCMailer_TC3oE\Product.wxs`.
 
-## Useful Links 
+## Liens utiles
 - [Générateur de GUID en ligne](https://www.guidgenerator.com/online-guid-generator.aspx)
 - [dnSpy .NET DLL décompilateur](https://github.com/0xd4d/dnSpy)
 - [Un très bon exemple de WXS](https://helgeklein.com/blog/2014/09/real-world-example-wix-msi-application-installer/#product-wxs)
